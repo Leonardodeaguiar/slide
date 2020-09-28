@@ -9,6 +9,10 @@ export default class Slide {
     };
   }
 
+  transition(active) {
+    this.slide.style.transition = active ? "transform .3s" : "";
+  }
+
   slidePosition(slide) {
     const margin = (this.wrapper.offsetWidth - slide.offsetWidth) / 2;
     return -(slide.offsetLeft - margin);
@@ -31,6 +35,7 @@ export default class Slide {
       active: index,
       next: index === last ? undefined : index + 1,
     };
+    return this.index;
   }
 
   changeSlide(index) {
@@ -38,6 +43,13 @@ export default class Slide {
     this.moveSlide(this.slideArray[index].position);
     this.slideIndexNav(index);
     this.distances.finalPosition = activeSlide.position;
+  }
+
+  activePrevSlide() {
+    if (this.index.prev !== undefined) this.changeSlide(this.index.prev);
+  }
+  activeNextSlide() {
+    if (this.index.next !== undefined) this.changeSlide(this.index.next);
   }
 
   moveSlide(distX) {
@@ -55,12 +67,13 @@ export default class Slide {
     if (event.type === "mousedown") {
       event.preventDefault();
       this.distances.startX = event.clientX;
-      moveType = "mousedown";
+      moveType = "mousemove";
     } else {
       this.distances.startX = event.changedTouches[0].clientX;
       moveType = "touchmove";
     }
     this.wrapper.addEventListener(moveType, this.onMove);
+    this.transition(false);
   }
 
   onMove(event) {
@@ -76,12 +89,26 @@ export default class Slide {
     const moveType = event.type === "mouseup" ? "mousemove" : "touchmove";
     this.wrapper.removeEventListener(moveType, this.onMove);
     this.distances.finalPosition = this.distances.movePosition;
+    this.transition(true);
+    this.changeSlideOnEnd();
+  }
+
+  changeSlideOnEnd() {
+    if (this.distances.movement > 120 && this.index.next !== undefined) {
+      this.activeNextSlide();
+    } else if (
+      this.distances.movement < -120 &&
+      this.index.prev !== undefined
+    ) {
+      this.activePrevSlide();
+    } else {
+      this.changeSlide(this.index.active);
+    }
   }
 
   addSlideEvent() {
     this.wrapper.addEventListener("mousedown", this.onStart);
     this.wrapper.addEventListener("touchstart", this.onStart);
-
     this.wrapper.addEventListener("mouseup", this.onEnd);
     this.wrapper.addEventListener("touchend", this.onEnd);
   }
@@ -94,6 +121,7 @@ export default class Slide {
 
   init() {
     this.slidesConfig();
+    this.transition(true);
     this.bindEvents();
     this.addSlideEvent();
     return this;
